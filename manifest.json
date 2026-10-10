@@ -1,0 +1,9 @@
+{
+  "id": "proton-drive-sync",
+  "name": "Proton Drive Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.14.4",
+  "description": "Sync your vault to Proton Drive using the official Proton Drive CLI.",
+  "author": "odrianoaliveira",
+  "isDesktopOnly": true
+}
