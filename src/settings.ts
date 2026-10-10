@@ -1,10 +1,13 @@
+export type FileConflictStrategy = "create-new-revision" | "rename" | "replace" | "skip";
+export type FolderConflictStrategy = "merge" | "rename" | "replace" | "skip";
+
 export interface ProtonDriveSyncSettings {
   /** Remote parent path on Proton Drive (Posix syntax, "/my-files" is the root). */
   remotePath: string;
   /** File conflict strategy: create-new-revision | rename | replace | skip */
-  fileConflictStrategy: string;
+  fileConflictStrategy: FileConflictStrategy;
   /** Folder conflict strategy: merge | rename | replace | skip */
-  folderConflictStrategy: string;
+  folderConflictStrategy: FolderConflictStrategy;
   /** Skip thumbnail generation server-side. */
   skipThumbnails: boolean;
   /** Debounce window (ms) after a change before triggering a sync. */
