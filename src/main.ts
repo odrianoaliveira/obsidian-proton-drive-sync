@@ -120,6 +120,7 @@ export default class ProtonDriveSyncPlugin extends Plugin {
         return;
       }
 
+      this.log(`uploading ${targets.length} targets to ${this.settings.remotePath}`);
       const ensured = await this.client.ensureRemoteFolder(this.settings.remotePath);
       if (!ensured.ok) {
         this.reportFailure(ensured);
@@ -140,6 +141,7 @@ export default class ProtonDriveSyncPlugin extends Plugin {
         const now = new Date();
         this.lastSyncAt = Date.now();
         this.lastSyncError = null;
+        this.log(`sync ok: ${result.stdout.trim()}`);
         this.statusBarEl.setText(`PD: synced ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`);
       } else {
         this.reportFailure(result);
@@ -164,8 +166,22 @@ export default class ProtonDriveSyncPlugin extends Plugin {
   private reportFailure(result: SyncResult) {
     const message = `Proton Drive: ${ProtonDriveSyncClient.formatSyncError(result)}`;
     this.lastSyncError = message;
+    this.log(`sync failed: ${message}`);
     new Notice(message);
     this.statusBarEl.setText("PD: error");
+  }
+
+  private log(message: string) {
+    try {
+      const logPath = path.join(
+        this.manifest.dir ??
+          (this.app.vault.adapter as FileSystemAdapter).getBasePath(),
+        "sync.log"
+      );
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`);
+    } catch {
+      // logging must never break sync
+    }
   }
 
   journalDeletion(vaultPath: string, kind: "delete" | "rename") {
