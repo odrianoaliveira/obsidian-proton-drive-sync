@@ -9,6 +9,8 @@ export default class ProtonDriveSyncPlugin extends Plugin {
   settings: ProtonDriveSyncSettings = { ...DEFAULT_SETTINGS };
   statusBarEl!: HTMLElement;
   client!: ProtonDriveSyncClient;
+  lastSyncAt: number | null = null;
+  lastSyncError: string | null = null;
   private syncing = false;
   private pending = false;
   private debounceTimer: number | null = null;
@@ -136,10 +138,20 @@ export default class ProtonDriveSyncPlugin extends Plugin {
 
       if (result.ok) {
         const now = new Date();
+        this.lastSyncAt = Date.now();
+        this.lastSyncError = null;
         this.statusBarEl.setText(`PD: synced ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`);
       } else {
         this.reportFailure(result);
       }
+    } catch (err) {
+      this.reportFailure({
+        ok: false,
+        code: null,
+        stdout: "",
+        stderr: err instanceof Error ? err.message : String(err),
+        error: "sync-threw",
+      });
     } finally {
       this.syncing = false;
       if (this.pending) {
@@ -150,22 +162,8 @@ export default class ProtonDriveSyncPlugin extends Plugin {
   }
 
   private reportFailure(result: SyncResult) {
-    const kind = ProtonDriveSyncClient.classifyError(result.stderr, result.error);
-    let message = "Proton Drive sync failed";
-    switch (kind) {
-      case "not-logged-in":
-        message = "Proton Drive: not logged in — run `proton-drive auth login`";
-        break;
-      case "keyring-locked":
-        message = "Proton Drive: keyring locked/unreachable — unlock your session keyring";
-        break;
-      case "binary-not-found":
-        message = "Proton Drive: binary not found";
-        break;
-      case "other":
-        message = `Proton Drive sync error: ${result.stderr.substring(0, 200)}${result.stderr.length > 200 ? "..." : ""}`;
-        break;
-    }
+    const message = `Proton Drive: ${ProtonDriveSyncClient.formatSyncError(result)}`;
+    this.lastSyncError = message;
     new Notice(message);
     this.statusBarEl.setText("PD: error");
   }

@@ -55,6 +55,21 @@ export class ProtonDriveSyncClient {
     return "other";
   }
 
+  static formatSyncError(result: SyncResult): string {
+    switch (ProtonDriveSyncClient.classifyError(result.stderr, result.error)) {
+      case "not-logged-in":
+        return "Not logged in — run `proton-drive auth login`";
+      case "keyring-locked":
+        return "Keyring locked/unreachable — unlock your session keyring";
+      case "binary-not-found":
+        return "Binary not found";
+      default: {
+        const detail = result.stderr || result.error || "Unknown error";
+        return detail.length > 200 ? detail.substring(0, 200) + "..." : detail;
+      }
+    }
+  }
+
   private run(args: string[], timeoutMs = 600000): Promise<SyncResult> {
     return new Promise<SyncResult>((resolve) => {
       const child = spawn(this.binaryPath, args, {

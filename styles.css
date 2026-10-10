@@ -1,0 +1,7 @@
+.proton-drive-success {
+  color: var(--color-green);
+}
+
+.proton-drive-error {
+  color: var(--color-red);
+}
