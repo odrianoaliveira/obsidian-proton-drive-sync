@@ -1,6 +1,6 @@
 import { Plugin, Notice, TFile, FileSystemAdapter } from "obsidian";
 import { DEFAULT_SETTINGS, ProtonDriveSyncSettings } from "./settings";
-import { ProtonDriveSyncClient, SyncResult, AuthErrorKind } from "./client";
+import { ProtonDriveSyncClient, SyncResult } from "./client";
 import { ProtonDriveSyncSettingTab } from "./setting-tab";
 import * as path from "path";
 import * as fs from "fs";
@@ -118,6 +118,12 @@ export default class ProtonDriveSyncPlugin extends Plugin {
         return;
       }
 
+      const ensured = await this.client.ensureRemoteFolder(this.settings.remotePath);
+      if (!ensured.ok) {
+        this.reportFailure(ensured);
+        return;
+      }
+
       const result = await this.client.upload(
         targets,
         this.settings.remotePath,
@@ -132,24 +138,7 @@ export default class ProtonDriveSyncPlugin extends Plugin {
         const now = new Date();
         this.statusBarEl.setText(`PD: synced ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`);
       } else {
-        const kind = ProtonDriveSyncClient.classifyError(result.stderr, result.error);
-        let message = "Proton Drive sync failed";
-        switch (kind) {
-          case "not-logged-in":
-            message = "Proton Drive: not logged in — run `proton-drive auth login`";
-            break;
-          case "keyring-locked":
-            message = "Proton Drive: keyring locked/unreachable — unlock your session keyring";
-            break;
-          case "binary-not-found":
-            message = "Proton Drive: binary not found";
-            break;
-          case "other":
-            message = `Proton Drive sync error: ${result.stderr.substring(0, 200)}${result.stderr.length > 200 ? "..." : ""}`;
-            break;
-        }
-        new Notice(message);
-        this.statusBarEl.setText("PD: error");
+        this.reportFailure(result);
       }
     } finally {
       this.syncing = false;
@@ -158,6 +147,27 @@ export default class ProtonDriveSyncPlugin extends Plugin {
         void this.sync();
       }
     }
+  }
+
+  private reportFailure(result: SyncResult) {
+    const kind = ProtonDriveSyncClient.classifyError(result.stderr, result.error);
+    let message = "Proton Drive sync failed";
+    switch (kind) {
+      case "not-logged-in":
+        message = "Proton Drive: not logged in — run `proton-drive auth login`";
+        break;
+      case "keyring-locked":
+        message = "Proton Drive: keyring locked/unreachable — unlock your session keyring";
+        break;
+      case "binary-not-found":
+        message = "Proton Drive: binary not found";
+        break;
+      case "other":
+        message = `Proton Drive sync error: ${result.stderr.substring(0, 200)}${result.stderr.length > 200 ? "..." : ""}`;
+        break;
+    }
+    new Notice(message);
+    this.statusBarEl.setText("PD: error");
   }
 
   journalDeletion(vaultPath: string, kind: "delete" | "rename") {

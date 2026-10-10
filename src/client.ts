@@ -10,10 +10,14 @@ export interface SyncResult {
   code: number | null;
   stdout: string;
   stderr: string;
-  error?: string;       // spawn-level error (e.g. ENOENT)
+  error?: string;
 }
 
-export type AuthErrorKind = "not-logged-in" | "keyring-locked" | "binary-not-found" | "other";
+export type AuthErrorKind =
+  | "not-logged-in"
+  | "keyring-locked"
+  | "binary-not-found"
+  | "other";
 
 export class ProtonDriveSyncClient {
   private binaryPath: string;
@@ -51,6 +55,98 @@ export class ProtonDriveSyncClient {
     return "other";
   }
 
+  private run(args: string[], timeoutMs = 600000): Promise<SyncResult> {
+    return new Promise<SyncResult>((resolve) => {
+      const child = spawn(this.binaryPath, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      child.stdout?.on("data", (data: Buffer) => {
+        stdout += data.toString();
+      });
+
+      child.stderr?.on("data", (data: Buffer) => {
+        stderr += data.toString();
+      });
+
+      const timeout = setTimeout(() => {
+        child.kill("SIGKILL");
+        resolve({ ok: false, code: null, stdout, stderr, error: "timeout" });
+      }, timeoutMs);
+
+      child.on("close", (code) => {
+        clearTimeout(timeout);
+        resolve({ ok: code === 0, code, stdout, stderr });
+      });
+
+      child.on("error", (err) => {
+        clearTimeout(timeout);
+        resolve({
+          ok: false,
+          code: null,
+          stdout: "",
+          stderr: "",
+          error: err.message,
+        });
+      });
+    });
+  }
+
+  async list(remotePath: string): Promise<SyncResult> {
+    return this.run(["filesystem", "list", "-j", remotePath]);
+  }
+
+  async createFolder(parentPath: string, name: string): Promise<SyncResult> {
+    return this.run(["filesystem", "create-folder", parentPath, name]);
+  }
+
+  /**
+   * Ensure a remote folder path exists, creating missing levels. The root
+   * segment (e.g. "/my-files") is assumed to already exist. Returns the first
+   * failure if any step errors.
+   */
+  async ensureRemoteFolder(remotePath: string): Promise<SyncResult> {
+    const existing = await this.list(remotePath);
+    if (existing.ok) {
+      return existing;
+    }
+
+    // Only create when the folder is genuinely missing; propagate auth/keyring
+    // and other errors verbatim.
+    if (!existing.stderr.toLowerCase().includes("node not found")) {
+      return existing;
+    }
+
+    const segments = remotePath.split("/").filter(Boolean);
+    if (segments.length === 0) {
+      return {
+        ok: false,
+        code: null,
+        stdout: "",
+        stderr: `Invalid remote path: ${remotePath}`,
+        error: "invalid-path",
+      };
+    }
+
+    let parent = "/" + segments[0];
+    for (let i = 1; i < segments.length; i++) {
+      const current = parent + "/" + segments[i];
+      const check = await this.list(current);
+      if (!check.ok) {
+        const created = await this.createFolder(parent, segments[i]);
+        if (!created.ok) {
+          return created;
+        }
+      }
+      parent = current;
+    }
+
+    return { ok: true, code: 0, stdout: "", stderr: "" };
+  }
+
   async upload(
     targets: string[],
     parentPath: string,
@@ -71,53 +167,6 @@ export class ProtonDriveSyncClient {
     args.push(...targets);
     args.push(parentPath);
 
-    return new Promise<SyncResult>((resolve) => {
-      const child = spawn(this.binaryPath, args, {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout?.on("data", (data: Buffer) => {
-        stdout += data.toString();
-      });
-
-      child.stderr?.on("data", (data: Buffer) => {
-        stderr += data.toString();
-      });
-
-      const timeout = setTimeout(() => {
-        child.kill("SIGKILL");
-        resolve({
-          ok: false,
-          code: null,
-          stdout,
-          stderr,
-          error: "timeout",
-        });
-      }, timeoutMs);
-
-      child.on("close", (code) => {
-        clearTimeout(timeout);
-        resolve({
-          ok: code === 0,
-          code,
-          stdout,
-          stderr,
-        });
-      });
-
-      child.on("error", (err) => {
-        clearTimeout(timeout);
-        resolve({
-          ok: false,
-          code: null,
-          stdout: "",
-          stderr: "",
-          error: err.message,
-        });
-      });
-    });
+    return this.run(args, timeoutMs);
   }
 }
