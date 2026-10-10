@@ -1,30 +1,35 @@
-# Proton Drive Sync (Obsidian plugin)
+# Proton Drive Sync
 
-Syncs your Obsidian vault to Proton Drive using the official
-[Proton Drive CLI](https://proton.me/support/drive-cli).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+An [Obsidian](https://obsidian.md) plugin that syncs your vault to [Proton Drive](https://proton.me/drive)
+using the official [Proton Drive CLI](https://proton.me/support/drive-cli).
+
+## Features
+
+- **Event-driven** — debounced uploads when notes are created, modified, renamed, or deleted.
+- **Manual** — "Sync now" command (Command Palette) and a settings button.
+- **Periodic fallback** — configurable interval (default 5 minutes).
+- **Configurable** — remote folder, file/folder conflict strategies, debounce, ignore list, binary path.
+- **Status bar + last-sync display**, plus a local `sync.log`.
 
 ## How it works
 
-The plugin wraps the `proton-drive` binary (v0.9.0) and performs one-way, additive uploads:
-
-- **Event-driven** — debounced uploads when notes are created, modified, renamed, or deleted.
-- **Manual** — "Sync now" command (Command Palette) or the settings button.
-- **Periodic** — optional interval fallback (default 5 minutes).
-
-It uploads your vault's top-level entries (excluding `.obsidian/` and `.trash/` by default) into a
-remote folder (default `/my-files/Obsidian`), creating that folder if it does not exist yet. Files
-with unchanged content are skipped automatically.
+The plugin wraps the `proton-drive` binary (v0.9.0) and performs one-way, additive uploads. It uploads
+your vault's top-level entries (excluding `.obsidian/` and `.trash/` by default) into a remote folder
+(default `/my-files/Obsidian`), creating that folder if it does not exist yet. Files with unchanged
+content are skipped automatically.
 
 ## Requirements
 
 - Obsidian **desktop** (the plugin is `isDesktopOnly`).
-- The `proton-drive` CLI installed and authenticated (`proton-drive auth login`). The plugin
-  auto-resolves `~/.local/bin/proton-drive`, or you can set an absolute path in settings.
+- The `proton-drive` CLI installed and authenticated (`proton-drive auth login`). The plugin auto-resolves
+  `~/.local/bin/proton-drive`, or you can set an absolute path in settings.
 
 ## Install (development)
 
 ```bash
-cd ~/repos/obsidian-proton-drive-sync
+cd obsidian-proton-drive-sync
 npm install
 npm run build
 mkdir -p "<vault>/.obsidian/plugins/proton-drive-sync"
@@ -32,6 +37,14 @@ cp main.js manifest.json styles.css "<vault>/.obsidian/plugins/proton-drive-sync
 ```
 
 Then enable **Proton Drive Sync** in Settings → Community plugins.
+
+## Development
+
+```bash
+npm install
+npm run dev      # esbuild watch (rebuild on change)
+npm run build    # typecheck + production bundle -> main.js
+```
 
 ## Settings
 
@@ -53,7 +66,6 @@ Then enable **Proton Drive Sync** in Settings → Community plugins.
 Sync outcomes are appended to `sync.log` inside the plugin directory
 (`<vault>/.obsidian/plugins/proton-drive-sync/sync.log`).
 
-## Relationship to the systemd timer
+## License
 
-On this machine, a systemd user timer (`proton-drive-sync.timer`) syncs non-vault `~/Sync` content
-into `/my-files/Sync`, while this plugin syncs the vault into `/my-files/Obsidian`.
+[MIT](LICENSE)
