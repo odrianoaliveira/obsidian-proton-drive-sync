@@ -26,6 +26,18 @@ content are skipped automatically.
 - The `proton-drive` CLI installed and authenticated (`proton-drive auth login`). The plugin auto-resolves
   `~/.local/bin/proton-drive`, or you can set an absolute path in settings.
 
+## Install (GitHub release)
+
+1. Download `proton-drive-sync.zip` from the [latest release](../../releases/latest).
+2. Create the plugin folder and unzip the three files into it:
+
+   ```bash
+   mkdir -p "<vault>/.obsidian/plugins/proton-drive-sync"
+   unzip proton-drive-sync.zip -d "<vault>/.obsidian/plugins/proton-drive-sync"
+   ```
+
+3. Reload Obsidian and enable **Proton Drive Sync** in Settings → Community plugins.
+
 ## Install (development)
 
 ```bash

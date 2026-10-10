@@ -30,6 +30,13 @@ npm run build      # tsc -noEmit + esbuild production -> main.js
 Install into a vault for testing: copy `main.js`, `manifest.json`, `styles.css` into
 `<vault>/.obsidian/plugins/proton-drive-sync/`, then reload Obsidian.
 
+## Release process
+
+Releases are built by `.github/workflows/release.yml` on tag push (`v*`): it runs
+`npm ci && npm run build`, packages `main.js` + `manifest.json` + `styles.css` into
+`proton-drive-sync.zip`, and creates a GitHub release. To cut one: bump `version` in `manifest.json`
+and `package.json`, commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`. See `RELEASING.md`.
+
 ## Verified Proton Drive CLI facts (do not re-derive)
 
 CLI `proton-drive` v0.9.0, auth via gnome-keyring/Secret Service.
