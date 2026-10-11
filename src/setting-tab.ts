@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import type ProtonDriveSyncPlugin from "./main";
 import { ProtonDriveSyncClient } from "./client";
 import { FileConflictStrategy, FolderConflictStrategy } from "./settings";
@@ -73,6 +73,30 @@ export class ProtonDriveSyncSettingTab extends PluginSettingTab {
             this.plugin.settings.intervalMinutes = numValue;
             await this.plugin.saveSettings();
           }
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Reconcile deletions")
+      .setDesc("Trash Proton Drive files/folders that no longer exist in the vault (deleted or renamed). Reversible via Proton Drive trash.")
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.reconcileDeletions)
+        .onChange(async (value) => {
+          this.plugin.settings.reconcileDeletions = value;
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Reconcile mode")
+      .setDesc("Dry run only reports what would be trashed.")
+      .addDropdown(dropdown => dropdown
+        .addOption("dry-run", "Dry run (report only)")
+        .addOption("apply", "Apply (trash remote files)")
+        .setValue(this.plugin.settings.reconcileMode)
+        .onChange(async (value) => {
+          this.plugin.settings.reconcileMode = value as "dry-run" | "apply";
+          await this.plugin.saveSettings();
         })
       );
 
@@ -194,6 +218,28 @@ export class ProtonDriveSyncSettingTab extends PluginSettingTab {
       })
     );
 
+    const reconcileNowSetting = new Setting(containerEl)
+      .setName("Reconcile now")
+      .setDesc("Trash remote files/folders no longer in the vault");
+
+    reconcileNowSetting.addButton(button => button
+      .setButtonText("Reconcile now")
+      .onClick(async () => {
+        try {
+          button.setDisabled(true);
+          button.setButtonText("Reconciling...");
+          if (this.plugin.settings.reconcileMode === "dry-run") {
+            await this.plugin.reconcileNow();
+          } else {
+            await this.confirmReconcile();
+          }
+        } finally {
+          button.setDisabled(false);
+          button.setButtonText("Reconcile now");
+        }
+      })
+    );
+
     this.connectionStatusEl = containerEl.createEl("p", {
       cls: "proton-drive-connection-status",
       text: " ",
@@ -229,5 +275,37 @@ export class ProtonDriveSyncSettingTab extends PluginSettingTab {
     } else if (message.startsWith("✗")) {
       this.connectionStatusEl.addClass("proton-drive-error");
     }
+  }
+
+  private confirmReconcile(): Promise<void> {
+    return new Promise((resolve) => {
+      const modal = new Modal(this.app);
+      modal.titleEl.setText("Trash remote files?");
+
+      const modalContent = modal.contentEl.createDiv();
+      modalContent.createEl("p", {
+        text: "Remote files no longer in the vault will be moved to Proton Drive trash.",
+      });
+
+      const actionButtons = modalContent.createDiv({ cls: "modal-button-container" });
+      const cancelButton = actionButtons.createEl("button", { text: "Cancel" });
+      const trashButton = actionButtons.createEl("button", { text: "Trash" });
+
+      trashButton.addClass("mod-cta");
+
+      cancelButton.addEventListener("click", () => {
+        modal.close();
+        resolve();
+      });
+
+      trashButton.addEventListener("click", async () => {
+        modal.close();
+        await this.plugin.reconcileNow();
+        this.renderLastSync();
+        resolve();
+      });
+
+      modal.open();
+    });
   }
 }

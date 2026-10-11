@@ -8,17 +8,21 @@ Releases are built and published automatically by GitHub Actions when you push a
 1. Bump the version in **both** files so they stay in sync:
    - `manifest.json` → `"version"`
    - `package.json` → `"version"`
-2. Commit:
+2. Update `CHANGELOG.md`: rename the `[Unreleased]` heading to `[X.Y.Z] - YYYY-MM-DD`, curate the
+   entries under **Added**/**Changed**/**Fixed**, and add a fresh empty `[Unreleased]` section at
+   the top.
+3. Commit the version bump and the changelog together:
    ```bash
    git commit -am "vX.Y.Z"
    ```
-3. Tag and push:
+4. Tag and push:
    ```bash
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
-4. The `Release` workflow runs `npm ci && npm run build`, packages `main.js` + `manifest.json` +
-   `styles.css` into `proton-drive-sync.zip`, and creates a GitHub release with auto-generated notes.
+5. The `Release` workflow runs `npm ci && npm run build`, packages `main.js` + `manifest.json` +
+   `styles.css` into `proton-drive-sync.zip`, and creates a GitHub release whose notes are the
+   `[X.Y.Z]` section of `CHANGELOG.md`.
 
 Watch it with `gh run watch` or in the Actions tab. The release appears under
 [Releases](../../releases) when it finishes.

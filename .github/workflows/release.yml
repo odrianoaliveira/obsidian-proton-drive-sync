@@ -33,7 +33,19 @@ jobs:
           cp main.js manifest.json styles.css release/
           (cd release && zip -r ../proton-drive-sync.zip .)
 
+      - name: Prepare release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="## [${VERSION}]" '
+            index($0, ver) == 1 { found=1 }
+            found && /^## / && index($0, ver) != 1 { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md entry for ${GITHUB_REF_NAME}." > release-notes.md
+          fi
+
       - name: Create GitHub release
-        run: gh release create "$GITHUB_REF_NAME" proton-drive-sync.zip --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" proton-drive-sync.zip --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}

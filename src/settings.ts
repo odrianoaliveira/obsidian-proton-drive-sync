@@ -20,6 +20,10 @@ export interface ProtonDriveSyncSettings {
   binaryPath: string;
   /** Path prefixes (relative to vault root) to exclude from upload. */
   ignore: string[];
+  /** Whether to reconcile deletions (trash remote nodes no longer in the vault). */
+  reconcileDeletions: boolean;
+  /** Mode for reconciliation: dry-run (report only) or apply (trash remote files). */
+  reconcileMode: "dry-run" | "apply";
 }
 
 export const DEFAULT_SETTINGS: ProtonDriveSyncSettings = {
@@ -32,4 +36,6 @@ export const DEFAULT_SETTINGS: ProtonDriveSyncSettings = {
   autoSync: true,
   binaryPath: "",
   ignore: [".obsidian", ".trash"],
+  reconcileDeletions: false,
+  reconcileMode: "dry-run",
 };
