@@ -114,6 +114,14 @@ export class ProtonDriveSyncClient {
     return this.run(["filesystem", "list", "-j", remotePath]);
   }
 
+  async info(remotePath: string): Promise<SyncResult> {
+    return this.run(["filesystem", "info", "-j", remotePath]);
+  }
+
+  async trash(remotePaths: string[]): Promise<SyncResult> {
+    return this.run(["filesystem", "trash", "-j", ...remotePaths]);
+  }
+
   async createFolder(parentPath: string, name: string): Promise<SyncResult> {
     return this.run(["filesystem", "create-folder", parentPath, name]);
   }
